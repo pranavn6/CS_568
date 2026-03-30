@@ -1,0 +1,13 @@
+{
+  "interventions": {
+    "mask_mandate": true,
+    "school_closure": false,
+    "vaccination_rate": 0.6
+  },
+  "metrics": {
+    "cases": [120, 150, 190, 240],
+    "hospital_load": [0.55, 0.68, 0.81, 0.93],
+    "deaths": [3, 4, 6, 9],
+    "economic_cost": 0.42
+  }
+}
