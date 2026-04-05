@@ -1,9 +1,15 @@
 import os
-from openai import OpenAI
+from openai import AzureOpenAI
 from utils import load_json, load_prompt, save_json, format_scenario
 from config import PROMPT_DIR, OUTPUT_DIR
 
-client = OpenAI()
+client = AzureOpenAI(
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    api_version=os.environ["AZURE_OPENAI_API_VERSION"],
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+)
+
+DEPLOYMENT = os.environ["AZURE_OPENAI_DEPLOYMENT"]
 
 
 def run_agent(agent_name, prompt_file, scenario):
@@ -13,7 +19,7 @@ def run_agent(agent_name, prompt_file, scenario):
     full_prompt = prompt + "\n\nScenario:\n" + scenario_text
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=DEPLOYMENT,
         messages=[
             {"role": "system", "content": "You are a precise analytical assistant."},
             {"role": "user", "content": full_prompt}
@@ -35,7 +41,7 @@ def run_consensus(results):
     )
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=DEPLOYMENT,
         messages=[
             {"role": "system", "content": "You are a synthesis and reasoning assistant."},
             {"role": "user", "content": full_prompt}

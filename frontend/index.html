@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Public Health Decision Support</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .subtitle { font-size: 12px; opacity: 0.8; }
+
+        /* Main Layout */
+        .main {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        /* Left Panel - Interventions */
+        .panel-left {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .panel-section h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .control-group .value {
+            font-weight: 600;
+            color: #3498db;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            display: inline-block;
+        }
+        .toggle input { display: none; }
+        .toggle .slider {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .toggle .slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle input:checked + .slider { background: #3498db; }
+        .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+        /* Slider */
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e0e0e0;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Start Button */
+        .start-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .start-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,152,219,0.4); }
+        .start-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* Right Panel - Chat */
+        .panel-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f7f8fa;
+        }
+
+        /* Agent Legend */
+        .agent-legend {
+            display: flex;
+            gap: 16px;
+            padding: 10px 20px;
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            flex-shrink: 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #555;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Chat Messages */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message-body {
+            max-width: 75%;
+        }
+        .message-sender {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .message-content {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-top-left-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* User message */
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        .message.user .message-body { text-align: right; }
+        .message.user .message-content {
+            background: #3498db;
+            color: white;
+            border-radius: 12px;
+            border-top-right-radius: 4px;
+        }
+
+        /* Facilitator message */
+        .message.facilitator .message-content {
+            background: #f3e8ff;
+            border-left: 3px solid #8e44ad;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #bbb;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* Chat Input */
+        .chat-input-area {
+            padding: 12px 20px;
+            background: white;
+            border-top: 1px solid #e8e8e8;
+            flex-shrink: 0;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .action-btn {
+            padding: 6px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            color: #555;
+            transition: all 0.2s;
+        }
+        .action-btn:hover { background: #f0f0f0; }
+        .action-btn.continue-btn { border-color: #3498db; color: #3498db; }
+        .action-btn.facilitate-btn { border-color: #8e44ad; color: #8e44ad; }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .chat-input:focus { border-color: #3498db; }
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: #3498db;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .send-btn:hover { background: #2980b9; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Welcome screen */
+        .welcome {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #999;
+        }
+        .welcome h2 { font-size: 20px; color: #666; margin-bottom: 8px; }
+        .welcome p { font-size: 14px; }
+
+        /* Metrics display */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .metric-card {
+            background: #f7f8fa;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .metric-card .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .metric-card .metric-label {
+            font-size: 10px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .loading-box {
+            background: white;
+            padding: 24px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        .loading-box p { margin-top: 12px; color: #555; font-size: 14px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>Multi-Agent Public Health Decision Support</h1>
+            <div class="subtitle">Interactive Counterfactual Exploration System</div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main">
+        <!-- Left Panel -->
+        <div class="panel-left">
+            <!-- Intervention Controls -->
+            <div class="panel-section">
+                <h3>Intervention Parameters</h3>
+                <div class="control-group">
+                    <label>
+                        Mask Mandate
+                        <label class="toggle">
+                            <input type="checkbox" id="mask_mandate" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        School Closure
+                        <label class="toggle">
+                            <input type="checkbox" id="school_closure">
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        Vaccination Rate
+                        <span class="value" id="vax_value">60%</span>
+                    </label>
+                    <input type="range" id="vaccination_rate" min="0" max="100" value="60"
+                        oninput="document.getElementById('vax_value').textContent = this.value + '%'">
+                </div>
+            </div>
+
+            <!-- Simulation Metrics -->
+            <div class="panel-section">
+                <h3>Simulation Metrics</h3>
+                <div class="control-group">
+                    <label>
+                        Cases (4-week trend)
+                        <span class="value" id="cases_value">120,150,190,240</span>
+                    </label>
+                    <input type="text" id="cases" value="120,150,190,240"
+                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
+                        oninput="document.getElementById('cases_value').textContent = this.value">
+                </div>
+                <div class="control-group">
+                    <label>
+                        Hospital Load (0-1)
+                        <span class="value" id="hosp_value">0.55,0.68,0.81,0.93</span>
+                    </label>
+                    <input type="text" id="hospital_load" value="0.55,0.68,0.81,0.93"
+                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
+                        oninput="document.getElementById('hosp_value').textContent = this.value">
+                </div>
+                <div class="control-group">
+                    <label>
+                        Deaths (4-week trend)
+                        <span class="value" id="deaths_value">3,4,6,9</span>
+                    </label>
+                    <input type="text" id="deaths" value="3,4,6,9"
+                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
+                        oninput="document.getElementById('deaths_value').textContent = this.value">
+                </div>
+                <div class="control-group">
+                    <label>
+                        Economic Cost (0-1)
+                        <span class="value" id="econ_value">0.42</span>
+                    </label>
+                    <input type="range" id="economic_cost" min="0" max="100" value="42"
+                        oninput="document.getElementById('econ_value').textContent = (this.value/100).toFixed(2)">
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <div class="panel-section">
+                <button class="start-btn" id="start-btn" onclick="startDiscussion()">
+                    Start Analysis Discussion
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel - Chat -->
+        <div class="panel-right">
+            <!-- Agent Legend -->
+            <div class="agent-legend">
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#e74c3c"></span>
+                    Dr. Amara (Epidemiologist)
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#3498db"></span>
+                    Dr. Chen (Healthcare)
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#27ae60"></span>
+                    Prof. Rivera (Economist)
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#8e44ad"></span>
+                    Facilitator
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area" id="chat-area">
+                <div class="welcome" id="welcome-screen">
+                    <div>
+                        <h2>Welcome, Policymaker</h2>
+                        <p>Configure intervention parameters on the left panel,<br>then click "Start Analysis Discussion" to begin.</p>
+                        <p style="margin-top:12px;font-size:12px;">Three expert agents will analyze your scenario<br>and you can join the discussion at any time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-area hidden" id="chat-input-area">
+                <div class="action-buttons">
+                    <button class="action-btn continue-btn" onclick="continueDiscussion()">
+                        Continue Discussion
+                    </button>
+                    <button class="action-btn facilitate-btn" onclick="callFacilitator()">
+                        Call Facilitator
+                    </button>
+                </div>
+                <div class="input-row">
+                    <input type="text" class="chat-input" id="chat-input"
+                        placeholder="Join the discussion... ask questions, challenge ideas, or suggest alternatives"
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey) sendMessage()">
+                    <button class="send-btn" id="send-btn" onclick="sendMessage()">&#9654;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loading">
+        <div class="loading-box">
+            <div class="typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+            <p id="loading-text">Agents are analyzing the scenario...</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "";
+        let conversation = [];
+        let scenarioText = "";
+        function getInterventions() {
+            return {
+                mask_mandate: document.getElementById("mask_mandate").checked,
+                school_closure: document.getElementById("school_closure").checked,
+                vaccination_rate: parseInt(document.getElementById("vaccination_rate").value) / 100
+            };
+        }
+
+        function getMetrics() {
+            const parseLine = (id) => document.getElementById(id).value.split(",").map(Number);
+            return {
+                cases: parseLine("cases"),
+                hospital_load: parseLine("hospital_load"),
+                deaths: parseLine("deaths"),
+                economic_cost: parseInt(document.getElementById("economic_cost").value) / 100
+            };
+        }
+
+        function showLoading(text) {
+            document.getElementById("loading-text").textContent = text;
+            document.getElementById("loading").classList.remove("hidden");
+        }
+        function hideLoading() {
+            document.getElementById("loading").classList.add("hidden");
+        }
+
+        function addMessage(msg) {
+            conversation.push(msg);
+            const chatArea = document.getElementById("chat-area");
+            const div = document.createElement("div");
+            const typeClass = msg.type === "user" ? "user" : msg.type === "facilitator" ? "facilitator" : "";
+            div.className = `message ${typeClass}`;
+
+            const avatarColor = msg.color || "#999";
+            const avatarText = msg.avatar || "?";
+
+            div.innerHTML = `
+                <div class="message-avatar" style="background:${avatarColor}">${avatarText}</div>
+                <div class="message-body">
+                    <div class="message-sender" style="color:${avatarColor}">${msg.speaker_name}</div>
+                    <div class="message-content">${msg.content}</div>
+                </div>
+            `;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function showTyping() {
+            const chatArea = document.getElementById("chat-area");
+            const div = document.createElement("div");
+            div.className = "message";
+            div.id = "typing-msg";
+            div.innerHTML = `
+                <div class="message-avatar" style="background:#bbb">...</div>
+                <div class="message-body">
+                    <div class="message-content">
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+            `;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function removeTyping() {
+            const el = document.getElementById("typing-msg");
+            if (el) el.remove();
+        }
+
+        async function startDiscussion() {
+            const startBtn = document.getElementById("start-btn");
+            startBtn.disabled = true;
+            showLoading("Agents are analyzing your scenario...");
+
+            // Clear previous
+            conversation = [];
+            const chatArea = document.getElementById("chat-area");
+            chatArea.innerHTML = "";
+            document.getElementById("welcome-screen")?.remove();
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/start`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        interventions: getInterventions(),
+                        metrics: getMetrics()
+                    })
+                });
+                const data = await resp.json();
+                scenarioText = data.scenario_text;
+
+                hideLoading();
+
+                // Show messages one by one with delay
+                for (let i = 0; i < data.messages.length; i++) {
+                    await new Promise(r => setTimeout(r, 500));
+                    addMessage(data.messages[i]);
+                }
+
+                // Show chat input
+                document.getElementById("chat-input-area").classList.remove("hidden");
+            } catch (err) {
+                hideLoading();
+                alert("Error connecting to server: " + err.message);
+            }
+
+            startBtn.disabled = false;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById("chat-input");
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            input.value = "";
+
+            // Add user message
+            addMessage({
+                speaker: "user",
+                speaker_name: "You (Policymaker)",
+                content: msg,
+                type: "user",
+                avatar: "P",
+                color: "#3498db"
+            });
+
+            showTyping();
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        message: msg,
+                        conversation: conversation,
+                        scenario_text: scenarioText
+                    })
+                });
+                const data = await resp.json();
+                removeTyping();
+
+                for (let i = 0; i < data.messages.length; i++) {
+                    await new Promise(r => setTimeout(r, 400));
+                    addMessage(data.messages[i]);
+                }
+            } catch (err) {
+                removeTyping();
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function continueDiscussion() {
+            showTyping();
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/continue`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        conversation: conversation,
+                        scenario_text: scenarioText
+                    })
+                });
+                const data = await resp.json();
+                removeTyping();
+                addMessage(data.message);
+            } catch (err) {
+                removeTyping();
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function callFacilitator() {
+            showTyping();
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/facilitate`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        conversation: conversation,
+                        scenario_text: scenarioText
+                    })
+                });
+                const data = await resp.json();
+                removeTyping();
+                addMessage(data.message);
+            } catch (err) {
+                removeTyping();
+                alert("Error: " + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
