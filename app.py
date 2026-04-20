@@ -31,7 +31,7 @@ AGENTS = {
         "name": "Dr. Amara (Epidemiologist)",
         "avatar": "E",
         "color": "#e74c3c",
-        "system_prompt": """You are Dr. Amara, an epidemiologist advising a policymaker on interventions (mask mandate, school closure, vaccination rate).
+        "system_prompt": """You are Dr. Amara, an epidemiologist advising a policymaker on interventions (mask mandate, school closure).
 
 INITIAL ROUND: Assess whether the chosen interventions are appropriate given the forecast numbers. Reference the data.
 FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
@@ -44,7 +44,7 @@ Cite one credible source with its URL. Do NOT cite a source already mentioned by
         "name": "Dr. Chen (Healthcare Analyst)",
         "avatar": "H",
         "color": "#3498db",
-        "system_prompt": """You are Dr. Chen, a healthcare capacity analyst advising a policymaker on interventions (mask mandate, school closure, vaccination rate).
+        "system_prompt": """You are Dr. Chen, a healthcare capacity analyst advising a policymaker on interventions (mask mandate, school closure).
 
 INITIAL ROUND: Assess whether the chosen interventions will keep hospital admissions manageable given the forecast. Reference the data.
 FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
@@ -57,7 +57,7 @@ Cite one credible source with its URL. Do NOT cite a source already mentioned by
         "name": "Prof. Rivera (Economist)",
         "avatar": "$",
         "color": "#27ae60",
-        "system_prompt": """You are Prof. Rivera, a health economist advising a policymaker on interventions (mask mandate, school closure, vaccination rate).
+        "system_prompt": """You are Prof. Rivera, a health economist advising a policymaker on interventions (mask mandate, school closure).
 
 INITIAL ROUND: Assess whether the restrictions are proportionate to the threat shown by the forecast data. Reference the data.
 FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
@@ -371,17 +371,26 @@ def summarize_paper():
     data = request.json
     url = data.get("url", "")
 
-    response = client.chat.completions.create(
-        model=DEPLOYMENT,
-        messages=[
-            {"role": "system", "content": "You are a research summarizer. Given a URL to a published study or report, use your knowledge of that publication to provide a brief summary. If you recognize the paper, summarize it. If not, infer from the URL (domain, path, keywords) what it likely covers and summarize accordingly. Always produce output — never say you cannot access the URL."},
-            {"role": "user", "content": f"Summarize this paper/report in 3-4 bullet points (use • for bullets). Cover: main finding, key data, and policy relevance.\n\nURL: {url}"},
-        ],
-        temperature=0.3,
-        max_completion_tokens=300,
-    )
+    messages = [
+        {"role": "system", "content": "You summarize research papers based on your training knowledge. You MUST always produce bullet points — never refuse or say you cannot access a URL. Recognize the paper from the URL and summarize it."},
+        {"role": "user", "content": f"Summarize this in 3-4 bullet points (use • for each). Cover: main finding, key data, policy relevance.\n\n{url}"},
+    ]
 
-    return jsonify({"summary": response.choices[0].message.content})
+    content = None
+    for attempt in range(2):
+        response = client.chat.completions.create(
+            model=DEPLOYMENT, messages=messages,
+            temperature=0.4 + attempt * 0.2,
+            max_completion_tokens=400,
+        )
+        content = response.choices[0].message.content
+        if content and content.strip():
+            break
+
+    if not content or not content.strip():
+        content = f"• This source is from {url.split('/')[2]}.\n• Unable to generate a detailed summary at this time — please visit the link directly."
+
+    return jsonify({"summary": content})
 
 
 # ── CDC Data & Forecasting ──

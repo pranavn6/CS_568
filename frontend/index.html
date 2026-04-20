@@ -521,14 +521,6 @@
                         </label>
                     </label>
                 </div>
-                <div class="control-group">
-                    <label>
-                        Vaccination Rate
-                        <span class="value" id="vax_value">60%</span>
-                    </label>
-                    <input type="range" id="vaccination_rate" min="0" max="100" value="60"
-                        oninput="document.getElementById('vax_value').textContent = this.value + '%'">
-                </div>
             </div>
 
             <!-- Start Button -->
@@ -698,8 +690,7 @@
         function getInterventions() {
             return {
                 mask_mandate: document.getElementById("mask_mandate").checked,
-                school_closure: document.getElementById("school_closure").checked,
-                vaccination_rate: parseInt(document.getElementById("vaccination_rate").value) / 100
+                school_closure: document.getElementById("school_closure").checked
             };
         }
 
