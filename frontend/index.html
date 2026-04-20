@@ -35,7 +35,7 @@
 
         /* Left Panel - Interventions */
         .panel-left {
-            width: 320px;
+            width: 400px;
             background: white;
             border-right: 1px solid #e0e0e0;
             display: flex;
@@ -120,6 +120,104 @@
             border-radius: 50%;
             cursor: pointer;
         }
+
+        /* Disease & Jurisdiction selectors */
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            accent-color: #3498db;
+        }
+        .jurisdiction-select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2c3e50;
+            background: white;
+            cursor: pointer;
+        }
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .forecast-card {
+            background: #f7f8fa;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            border-top: 3px solid #3498db;
+        }
+        .forecast-card .fc-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .forecast-card .fc-label {
+            font-size: 9px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .forecast-card .fc-sub {
+            font-size: 10px;
+            color: #95a5a6;
+            margin-top: 2px;
+        }
+        .fc-decreasing { color: #27ae60 !important; }
+        .fc-increasing { color: #e74c3c !important; }
+
+        /* Summarize button & box */
+        .summarize-btn {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            border: 1px solid #3498db;
+            border-radius: 12px;
+            background: white;
+            color: #3498db;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .summarize-btn:hover { background: #eef6fc; }
+        .summary-box {
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: #f0f7ff;
+            border: 1px solid #d0e3f7;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #2c3e50;
+            position: relative;
+        }
+        .summary-box .summary-close {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #999;
+            background: none;
+            border: none;
+        }
+        .summary-box .summary-close:hover { color: #333; }
 
         /* Start Button */
         .start-btn {
@@ -322,29 +420,6 @@
         .welcome h2 { font-size: 20px; color: #666; margin-bottom: 8px; }
         .welcome p { font-size: 14px; }
 
-        /* Metrics display */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .metric-card {
-            background: #f7f8fa;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-        }
-        .metric-card .metric-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #2c3e50;
-        }
-        .metric-card .metric-label {
-            font-size: 10px;
-            color: #7f8c8d;
-            text-transform: uppercase;
-        }
-
         /* Loading overlay */
         .loading-overlay {
             position: fixed;
@@ -380,6 +455,51 @@
     <div class="main">
         <!-- Left Panel -->
         <div class="panel-left">
+            <!-- Disease & Jurisdiction -->
+            <div class="panel-section">
+                <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="white-space:nowrap;">
+                        <h3>Disease</h3>
+                        <div class="radio-group">
+                            <label><input type="radio" name="disease" value="flu"> Influenza</label>
+                            <label><input type="radio" name="disease" value="covid" checked> COVID-19</label>
+                        </div>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <h3>Jurisdiction</h3>
+                        <select class="jurisdiction-select" id="jurisdiction">
+                            <option value="USA">United States (National)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecast Display -->
+            <div class="panel-section" id="forecast-section">
+                <div class="forecast-grid" id="forecast-grid">
+                    <div class="forecast-card">
+                        <div class="fc-label">Latest Week Admissions</div>
+                        <div class="fc-value" id="fc-latest">--</div>
+                        <div class="fc-sub" id="fc-latest-date"></div>
+                    </div>
+                    <div class="forecast-card">
+                        <div class="fc-label">Week-over-Week Change</div>
+                        <div class="fc-value" id="fc-wow">--</div>
+                        <div class="fc-sub" id="fc-wow-dir"></div>
+                    </div>
+                    <div class="forecast-card">
+                        <div class="fc-label">4-Week Trend</div>
+                        <div class="fc-value" id="fc-trend">--</div>
+                        <div class="fc-sub" id="fc-trend-dir"></div>
+                    </div>
+                    <div class="forecast-card">
+                        <div class="fc-label">Next Week Forecast</div>
+                        <div class="fc-value" id="fc-next">--</div>
+                        <div class="fc-sub" id="fc-next-range"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Intervention Controls -->
             <div class="panel-section">
                 <h3>Intervention Parameters</h3>
@@ -408,46 +528,6 @@
                     </label>
                     <input type="range" id="vaccination_rate" min="0" max="100" value="60"
                         oninput="document.getElementById('vax_value').textContent = this.value + '%'">
-                </div>
-            </div>
-
-            <!-- Simulation Metrics -->
-            <div class="panel-section">
-                <h3>Simulation Metrics</h3>
-                <div class="control-group">
-                    <label>
-                        Cases (4-week trend)
-                        <span class="value" id="cases_value">120,150,190,240</span>
-                    </label>
-                    <input type="text" id="cases" value="120,150,190,240"
-                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
-                        oninput="document.getElementById('cases_value').textContent = this.value">
-                </div>
-                <div class="control-group">
-                    <label>
-                        Hospital Load (0-1)
-                        <span class="value" id="hosp_value">0.55,0.68,0.81,0.93</span>
-                    </label>
-                    <input type="text" id="hospital_load" value="0.55,0.68,0.81,0.93"
-                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
-                        oninput="document.getElementById('hosp_value').textContent = this.value">
-                </div>
-                <div class="control-group">
-                    <label>
-                        Deaths (4-week trend)
-                        <span class="value" id="deaths_value">3,4,6,9</span>
-                    </label>
-                    <input type="text" id="deaths" value="3,4,6,9"
-                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;"
-                        oninput="document.getElementById('deaths_value').textContent = this.value">
-                </div>
-                <div class="control-group">
-                    <label>
-                        Economic Cost (0-1)
-                        <span class="value" id="econ_value">0.42</span>
-                    </label>
-                    <input type="range" id="economic_cost" min="0" max="100" value="42"
-                        oninput="document.getElementById('econ_value').textContent = (this.value/100).toFixed(2)">
                 </div>
             </div>
 
@@ -526,6 +606,95 @@
         const API_BASE = "";
         let conversation = [];
         let scenarioText = "";
+        let currentForecast = null;
+
+        // Load jurisdictions on page load
+        async function loadJurisdictions() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/jurisdictions`);
+                const data = await resp.json();
+                const sel = document.getElementById("jurisdiction");
+                sel.innerHTML = "";
+                data.forEach(j => {
+                    const opt = document.createElement("option");
+                    opt.value = j.code;
+                    opt.textContent = j.name;
+                    if (j.code === "USA") opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Failed to load jurisdictions:", e);
+            }
+        }
+
+        function getSelectedDisease() {
+            return document.querySelector('input[name="disease"]:checked').value;
+        }
+
+        async function fetchForecast() {
+            const disease = getSelectedDisease();
+            const jurisdiction = document.getElementById("jurisdiction").value;
+
+            // Show loading state in cards
+            ["fc-latest","fc-wow","fc-trend","fc-next"].forEach(id => {
+                document.getElementById(id).textContent = "...";
+            });
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/forecast?disease=${disease}&jurisdiction=${jurisdiction}`);
+                const data = await resp.json();
+
+                if (data.error) {
+                    ["fc-latest","fc-wow","fc-trend","fc-next"].forEach(id => {
+                        document.getElementById(id).textContent = "N/A";
+                    });
+                    return;
+                }
+
+                currentForecast = data;
+
+                // Latest admissions
+                document.getElementById("fc-latest").textContent = Math.round(data.latest_admissions).toLocaleString();
+                document.getElementById("fc-latest-date").textContent = data.latest_week;
+
+                // Week-over-week change
+                const wow = data.wow_change;
+                const wowEl = document.getElementById("fc-wow");
+                wowEl.textContent = (wow >= 0 ? "+" : "") + wow + "%";
+                wowEl.className = "fc-value " + (wow <= 0 ? "fc-decreasing" : "fc-increasing");
+                document.getElementById("fc-wow-dir").textContent = wow <= 0 ? "Decreasing" : "Increasing";
+
+                // 4-week trend
+                const trend = data.four_week_trend;
+                const trendEl = document.getElementById("fc-trend");
+                trendEl.textContent = (trend >= 0 ? "+" : "") + trend + "%";
+                trendEl.className = "fc-value " + (trend <= 0 ? "fc-decreasing" : "fc-increasing");
+                document.getElementById("fc-trend-dir").textContent = trend <= 0 ? "Decreasing" : "Increasing";
+
+                // Next week forecast
+                if (data.next_week_forecast) {
+                    const nw = data.next_week_forecast;
+                    document.getElementById("fc-next").textContent = Math.round(nw.point).toLocaleString();
+                    document.getElementById("fc-next-range").textContent =
+                        `ENSEMBLE [${Math.round(nw.lower_95).toLocaleString()} \u2013 ${Math.round(nw.upper_95).toLocaleString()}]`;
+                }
+            } catch (e) {
+                console.error("Forecast fetch failed:", e);
+                ["fc-latest","fc-wow","fc-trend","fc-next"].forEach(id => {
+                    document.getElementById(id).textContent = "Error";
+                });
+            }
+        }
+
+        // Auto-fetch when disease or jurisdiction changes
+        document.addEventListener("DOMContentLoaded", () => {
+            loadJurisdictions().then(() => fetchForecast());
+            document.querySelectorAll('input[name="disease"]').forEach(r => {
+                r.addEventListener("change", fetchForecast);
+            });
+            document.getElementById("jurisdiction").addEventListener("change", fetchForecast);
+        });
+
         function getInterventions() {
             return {
                 mask_mandate: document.getElementById("mask_mandate").checked,
@@ -535,12 +704,14 @@
         }
 
         function getMetrics() {
-            const parseLine = (id) => document.getElementById(id).value.split(",").map(Number);
+            if (!currentForecast) return {};
             return {
-                cases: parseLine("cases"),
-                hospital_load: parseLine("hospital_load"),
-                deaths: parseLine("deaths"),
-                economic_cost: parseInt(document.getElementById("economic_cost").value) / 100
+                disease: getSelectedDisease(),
+                jurisdiction: document.getElementById("jurisdiction").value,
+                latest_admissions: currentForecast.latest_admissions,
+                wow_change: currentForecast.wow_change,
+                four_week_trend: currentForecast.four_week_trend,
+                next_week_forecast: currentForecast.next_week_forecast
             };
         }
 
@@ -551,6 +722,59 @@
         function hideLoading() {
             document.getElementById("loading").classList.add("hidden");
         }
+
+        let summarizeCounter = 0;
+
+        function linkify(text) {
+            return text.replace(/(https?:\/\/[^\s\)]+)/g, (url) => {
+                const id = "sum-" + (summarizeCounter++);
+                return `<a href="${url}" target="_blank" style="color:#2980b9;text-decoration:underline;">${url}</a><button class="summarize-btn" id="${id}" data-url="${encodeURIComponent(url)}">Summarize</button>`;
+            });
+        }
+
+        // Use event delegation for summarize buttons
+        document.addEventListener("click", async (e) => {
+            const btn = e.target.closest(".summarize-btn");
+            if (!btn) return;
+
+            const url = decodeURIComponent(btn.dataset.url);
+
+            // Toggle existing summary
+            const existing = btn.nextElementSibling;
+            if (existing && existing.classList.contains("summary-box")) {
+                existing.classList.toggle("hidden");
+                btn.textContent = existing.classList.contains("hidden") ? "Summarize" : "Hide";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Loading...";
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/summarize`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+                const data = await resp.json();
+                const summary = data.summary || "No summary available.";
+
+                const box = document.createElement("div");
+                box.className = "summary-box";
+                box.innerHTML = `<button class="summary-close">&times;</button>` + summary.replace(/\n/g, "<br>");
+                btn.insertAdjacentElement("afterend", box);
+                btn.textContent = "Hide";
+
+                box.querySelector(".summary-close").addEventListener("click", () => {
+                    box.classList.add("hidden");
+                    btn.textContent = "Summarize";
+                });
+            } catch (e) {
+                btn.textContent = "Error";
+                console.error("Summarize failed:", e);
+            }
+            btn.disabled = false;
+        });
 
         function addMessage(msg) {
             conversation.push(msg);
@@ -566,7 +790,7 @@
                 <div class="message-avatar" style="background:${avatarColor}">${avatarText}</div>
                 <div class="message-body">
                     <div class="message-sender" style="color:${avatarColor}">${msg.speaker_name}</div>
-                    <div class="message-content">${msg.content}</div>
+                    <div class="message-content">${linkify(msg.content)}</div>
                 </div>
             `;
             chatArea.appendChild(div);

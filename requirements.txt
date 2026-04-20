@@ -1,0 +1,7 @@
+flask
+flask-cors
+openai>=1.0.0
+httpx
+numpy
+statsmodels
+scipy
