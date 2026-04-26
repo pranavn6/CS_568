@@ -1,171 +1,85 @@
-# Multi-Agent Reasoning Module
+# Multi-Agent Public Health Decision Support System
 
-## Overview
-
-This module implements a multi-agent reasoning system for analyzing counterfactual public health scenarios.
-Instead of generating a single prediction, the system produces multiple perspectives from specialized agents and synthesizes them into a final recommendation.
-
-The goal is to make trade-offs explicit across public health, healthcare capacity, and economic impact.
-
----
-
-## System Architecture
-
-The system takes structured simulation output as input and produces agent-based analyses as output.
-
-### Input
-
-```json
-{
-  "interventions": {
-    "mask_mandate": true,
-    "school_closure": false,
-    "vaccination_rate": 0.6
-  },
-  "metrics": {
-    "cases": [...],
-    "hospital_load": [...],
-    "deaths": [...],
-    "economic_cost": 0.42
-  }
-}
-```
-
-### Output
-
-```json
-{
-  "epidemiologist": "...",
-  "healthcare": "...",
-  "economist": "...",
-  "consensus": "..."
-}
-```
-
-Each agent produces concise, structured reasoning grounded in the provided data.
-
----
-
-## Agents
-
-### Epidemiologist
-
-* Focus: infection spread, cases, deaths
-* Evaluates whether interventions are sufficient
-* Identifies public health risks
-* Does not discuss economic or operational factors
-
-### Healthcare Capacity Analyst
-
-* Focus: hospital load and system strain
-* Assesses risk of overload
-* Identifies operational constraints
-* Does not analyze economic trade-offs
-
-### Economic Impact Analyst
-
-* Focus: economic disruption and societal cost
-* Evaluates trade-offs between restrictions and stability
-* Uses health trends only as context for economic decisions
-
-### Consensus Agent
-
-* Synthesizes all agent responses
-* Identifies agreement and key tensions
-* Produces a balanced recommendation
-
----
+An interactive web application where three AI specialist agents discuss the applicability of user-selected public health interventions based on real CDC forecast data.
 
 ## How It Works
 
-1. Load a structured simulation scenario
-2. Run each agent independently using prompt-based reasoning
-3. Generate outputs from:
+1. **Select disease and jurisdiction** — Choose between COVID-19 or Influenza, and pick a U.S. state or national level
+2. **View live forecast data** — The system fetches real hospital admission data from the CDC NHSN API and runs an ARIMA forecast showing latest admissions, week-over-week change, 4-week trend, and next-week prediction
+3. **Set interventions** — Toggle mask mandate and school closure on/off
+4. **Start the discussion** — Three specialist agents analyze whether your chosen interventions are appropriate given the forecast:
+   - **Dr. Amara (Epidemiologist)** — Assesses interventions from a transmission-control perspective
+   - **Dr. Chen (Healthcare Analyst)** — Evaluates whether hospitals can handle the projected admissions
+   - **Prof. Rivera (Economist)** — Analyzes the cost-benefit trade-off of the restrictions
+5. **Join the conversation** — Ask questions, challenge recommendations, or request deeper analysis. Each agent cites credible sources with links, and you can click "Summarize" next to any citation to get bullet-point highlights
+6. **Facilitator** — A fourth agent synthesizes agreement/disagreement and guides the discussion
 
-   * Epidemiologist
-   * Healthcare Analyst
-   * Economic Analyst
-4. Pass all outputs into the consensus agent
-5. Save results as structured JSON
+## Architecture
 
----
+```
+Browser (index.html)  <-->  Flask API (app.py)  <-->  Azure OpenAI (GPT-4)
+                                  |
+                            CDC NHSN API (real-time hospital admission data)
+                                  |
+                            ARIMA Forecast (statsmodels)
+```
+
+All code is in two files:
+- `app.py` — Flask backend with agent orchestration, CDC data fetching, ARIMA forecasting, and all API endpoints
+- `frontend/index.html` — Single-page UI with chat interface, intervention controls, and forecast display
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | Serve the frontend |
+| `/api/jurisdictions` | GET | List all available U.S. jurisdictions |
+| `/api/forecast?disease=covid&jurisdiction=USA` | GET | Fetch CDC data and return ARIMA forecast |
+| `/api/start` | POST | Start a new discussion with initial agent analyses |
+| `/api/chat` | POST | Send a user message, get 2 agent responses |
+| `/api/continue` | POST | Let agents continue discussing autonomously |
+| `/api/facilitate` | POST | Call the facilitator to synthesize |
+| `/api/summarize` | POST | Summarize a research paper from its URL |
 
 ## Setup
 
 ### Install dependencies
 
 ```bash
-python -m pip install openai
+pip install -r requirements.txt
 ```
 
-### Set API key
+### Set environment variables
 
 ```bash
-export OPENAI_API_KEY="your_api_key_here"
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_API_VERSION="2024-02-15-preview"
+export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
 ```
 
----
-
-## Running the System
-
-### Run a single scenario
+### Run the application
 
 ```bash
-python agent_runner.py
+python app.py
 ```
 
-### Run all test scenarios
+Then open **http://localhost:5001** in your browser.
 
-```bash
-python test_runner.py
-```
-
-Outputs are saved in:
+## Project Structure
 
 ```
-outputs/
+CS_568/
+├── app.py                 # Flask backend (agents, forecasting, API routes)
+├── frontend/
+│   └── index.html         # Frontend UI (chat, controls, forecast display)
+├── requirements.txt       # Python dependencies
+└── README.md
 ```
 
----
+## Dependencies
 
-## Example Scenarios
-
-Located in:
-
-```
-data/
-```
-
-Includes:
-
-* Moderate intervention scenario
-* High-risk scenario (healthcare overload)
-* Controlled scenario (high restrictions, high cost)
-
----
-
-## Design Principles
-
-* Prompt-based agents (no model training required)
-* Strict role separation to avoid overlapping reasoning
-* Fixed-length outputs for clarity and comparability
-* Structured JSON outputs for evaluation and integration
-
----
-
-## Current Status
-
-* Multi-agent pipeline implemented
-* LLM integration complete
-* Prompt refinement completed
-* Clear role separation achieved
-* Outputs saved for evaluation
-
----
-
-## Next Steps
-
-* Add cross-agent critique (optional extension)
-* Integrate with simulation module
-* Add logging for evaluation metrics
-* Connect to frontend interface
+- Flask + Flask-CORS (web server)
+- OpenAI SDK (Azure OpenAI GPT-4)
+- httpx (CDC API calls)
+- NumPy + statsmodels + SciPy (ARIMA forecasting)
