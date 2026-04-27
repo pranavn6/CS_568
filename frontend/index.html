@@ -293,7 +293,7 @@
             justify-content: center;
             color: white;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 20px;
             flex-shrink: 0;
         }
 
@@ -333,6 +333,8 @@
             background: #f3e8ff;
             border-left: 3px solid #8e44ad;
         }
+
+
 
         /* Typing indicator */
         .typing-indicator {
@@ -536,19 +538,19 @@
             <!-- Agent Legend -->
             <div class="agent-legend">
                 <div class="legend-item">
-                    <span class="legend-dot" style="background:#e74c3c"></span>
+                    <span>&#x1F469;&#x200D;&#x2695;&#xFE0F;</span>
                     Dr. Amara (Epidemiologist)
                 </div>
                 <div class="legend-item">
-                    <span class="legend-dot" style="background:#3498db"></span>
+                    <span>&#x1F3E5;</span>
                     Dr. Chen (Healthcare)
                 </div>
                 <div class="legend-item">
-                    <span class="legend-dot" style="background:#27ae60"></span>
+                    <span>&#x1F4CA;</span>
                     Prof. Rivera (Economist)
                 </div>
                 <div class="legend-item">
-                    <span class="legend-dot" style="background:#8e44ad"></span>
+                    <span>&#x1F9D1;&#x200D;&#x2696;&#xFE0F;</span>
                     Facilitator
                 </div>
             </div>
@@ -599,6 +601,7 @@
         let conversation = [];
         let scenarioText = "";
         let currentForecast = null;
+        let pendingMessages = [];
 
         // Load jurisdictions on page load
         async function loadJurisdictions() {
@@ -716,7 +719,16 @@
 
         let summarizeCounter = 0;
 
+        function formatContent(text) {
+            // Bold **text**
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Line breaks for structured format
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
         function linkify(text) {
+            text = formatContent(text);
             return text.replace(/(https?:\/\/[^\s\)]+)/g, (url) => {
                 const id = "sum-" + (summarizeCounter++);
                 return `<a href="${url}" target="_blank" style="color:#2980b9;text-decoration:underline;">${url}</a><button class="summarize-btn" id="${id}" data-url="${encodeURIComponent(url)}">Summarize</button>`;
@@ -748,7 +760,14 @@
                     body: JSON.stringify({ url })
                 });
                 const data = await resp.json();
-                const summary = data.summary || "No summary available.";
+                const summary = data.summary;
+
+                if (!summary || !summary.trim()) {
+                    btn.textContent = "No summary";
+                    btn.disabled = true;
+                    btn.style.opacity = "0.5";
+                    return;
+                }
 
                 const box = document.createElement("div");
                 box.className = "summary-box";
@@ -770,18 +789,22 @@
         function addMessage(msg) {
             conversation.push(msg);
             const chatArea = document.getElementById("chat-area");
+
+            // Regular message (agent, user, facilitator)
             const div = document.createElement("div");
             const typeClass = msg.type === "user" ? "user" : msg.type === "facilitator" ? "facilitator" : "";
             div.className = `message ${typeClass}`;
 
             const avatarColor = msg.color || "#999";
             const avatarText = msg.avatar || "?";
+            const audioBtn = "";
 
             div.innerHTML = `
                 <div class="message-avatar" style="background:${avatarColor}">${avatarText}</div>
                 <div class="message-body">
                     <div class="message-sender" style="color:${avatarColor}">${msg.speaker_name}</div>
                     <div class="message-content">${linkify(msg.content)}</div>
+                    ${audioBtn}
                 </div>
             `;
             chatArea.appendChild(div);
@@ -813,6 +836,11 @@
         async function startDiscussion() {
             const startBtn = document.getElementById("start-btn");
             startBtn.disabled = true;
+            showLoading("Fetching latest data...");
+
+            // Ensure forecast is fresh before starting
+            await fetchForecast();
+
             showLoading("Agents are analyzing your scenario...");
 
             // Clear previous
@@ -835,11 +863,14 @@
 
                 hideLoading();
 
-                // Show messages one by one with delay
-                for (let i = 0; i < data.messages.length; i++) {
-                    await new Promise(r => setTimeout(r, 500));
-                    addMessage(data.messages[i]);
+                // Show intro messages one after another automatically with delay
+                let i = 0;
+                for (; i < data.messages.length && data.messages[i].type === "intro"; i++) {
+                    const msg = data.messages[i];
+                    await new Promise(r => setTimeout(r, 800));
+                    addMessage(msg);
                 }
+                pendingMessages = data.messages.slice(i);
 
                 // Show chat input
                 document.getElementById("chat-input-area").classList.remove("hidden");
@@ -864,7 +895,7 @@
                 speaker_name: "You (Policymaker)",
                 content: msg,
                 type: "user",
-                avatar: "P",
+                avatar: "\uD83D\uDC64",
                 color: "#3498db"
             });
 
@@ -894,6 +925,12 @@
         }
 
         async function continueDiscussion() {
+            // Show queued initial messages first
+            if (pendingMessages.length > 0) {
+                addMessage(pendingMessages.shift());
+                return;
+            }
+
             showTyping();
 
             try {

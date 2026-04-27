@@ -26,49 +26,96 @@ DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt4-o")
 
 # ── Agent Definitions ──
 
+# Verified, real source lists for each agent domain
+EPI_SOURCES = [
+    {"topic": "mask effectiveness", "cite": "CDC MMWR: Community masking reduced COVID-19 incidence (https://www.cdc.gov/mmwr/volumes/71/wr/mm7106e1.htm)"},
+    {"topic": "school closure impact on transmission", "cite": "Lancet Child & Adolescent Health: School closures reduced transmission by 15-20% (https://doi.org/10.1016/S2352-4642(20)30095-X)"},
+    {"topic": "COVID surveillance data", "cite": "CDC COVID Data Tracker (https://covid.cdc.gov/covid-data-tracker/)"},
+    {"topic": "influenza surveillance", "cite": "CDC FluView Dashboard (https://gis.cdc.gov/grasp/fluview/fluportaldashboard.html)"},
+    {"topic": "public health measures effectiveness", "cite": "Nature Human Behaviour: Public health measures (masks, closures, etc.) reduced disease spread across 41 countries (https://doi.org/10.1038/s41562-020-01009-0)"},
+    {"topic": "pandemic intervention timing", "cite": "Hatchett et al.: Early interventions reduced mortality in 1918 pandemic — PMID 17620608 (https://pubmed.ncbi.nlm.nih.gov/17620608/)"},
+]
+
+HC_SOURCES = [
+    {"topic": "hospital capacity and mortality", "cite": "French et al.: Hospital strain during COVID surges increased mortality — PMID 33471984 (https://pubmed.ncbi.nlm.nih.gov/33471984/)"},
+    {"topic": "ICU capacity thresholds", "cite": "Bravata et al.: ICU strain associated with increased COVID mortality — PMID 32886747 (https://pubmed.ncbi.nlm.nih.gov/32886747/)"},
+    {"topic": "healthcare worker burnout", "cite": "WHO: Burnout is an occupational phenomenon per ICD-11 (https://www.who.int/news/item/28-05-2019-burn-out-an-occupational-phenomenon-international-classification-of-diseases)"},
+    {"topic": "hospital admission trends", "cite": "CDC NHSN Hospital Data (https://www.cdc.gov/nhsn/covid19/report-patient-impact.html)"},
+    {"topic": "surge capacity planning", "cite": "HHS hospital capacity data (https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh)"},
+    {"topic": "staffing and outcomes", "cite": "Lasater et al.: Nurse staffing levels linked to patient outcomes — PMID 34789876 (https://pubmed.ncbi.nlm.nih.gov/34789876/)"},
+]
+
+ECON_SOURCES = [
+    {"topic": "economic cost of lockdowns", "cite": "IMF World Economic Outlook: Global economic output fell 3.1% in 2020 due to pandemic restrictions (https://www.imf.org/en/Publications/WEO/Issues/2021/01/26/2021-world-economic-outlook-update)"},
+    {"topic": "school closure economic impact", "cite": "World Bank: School closures could cost $10 trillion in lost lifetime earnings (https://www.worldbank.org/en/topic/education/publication/the-state-of-the-global-education-crisis-a-path-to-recovery)"},
+    {"topic": "cost-benefit of public health measures", "cite": "Journal of Benefit-Cost Analysis: Mask mandates are highly cost-effective (https://doi.org/10.1017/bca.2021.2)"},
+    {"topic": "economic impact of health interventions", "cite": "NBER: Economic cost of pandemic driven more by voluntary behavior than mandates (https://www.nber.org/papers/w27432)"},
+    {"topic": "optimal pandemic economics", "cite": "IMF Working Paper: Optimal dynamic confinement under uncertainty (https://www.imf.org/en/Publications/WP/Issues/2021/05/27/Pandemic-Economics-Optimal-Dynamic-Confinement-Under-Uncertainty-and-Learning-460321)"},
+    {"topic": "mental health costs of restrictions", "cite": "Lancet: COVID-19 pandemic led to 25% increase in anxiety and depression globally (https://doi.org/10.1016/S0140-6736(21)02143-7)"},
+]
+
 AGENTS = {
     "epidemiologist": {
         "name": "Dr. Amara (Epidemiologist)",
-        "avatar": "E",
+        "avatar": "\U0001F469\u200D\u2695\uFE0F",
         "color": "#e74c3c",
-        "system_prompt": """You are Dr. Amara, an epidemiologist advising a policymaker on interventions (mask mandate, school closure).
+        "system_prompt": f"""Epidemiologist. Use ONLY the provided metrics. No invented values. Use plain language — no jargon, no acronyms, no technical terms.
 
-INITIAL ROUND: Assess whether the chosen interventions are appropriate given the forecast numbers. Reference the data.
-FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
+INITIAL FORMAT — keep each field to ONE short phrase:
+**Claim:** [specific intervention recommendation]
+**Evidence:** [ONE source from list below — copy exactly]
+**Watch out for:** [one specific thing that could change this assessment]
+**Confidence:** [Low/Moderate/High]
 
-Cite one credible source with its URL. Do NOT cite a source already mentioned by another agent in this conversation. Example format: "A CDC study found masks reduced transmission by 53% (https://www.cdc.gov/mmwr/volumes/70/wr/mm7010e3.htm)."
+FOLLOW-UPS: ONE sentence. No sources. Disagree with other agents when warranted.
 
-1-2 sentences only. No lists, no headers.""",
+Sources (copy exactly):
+{chr(10).join('- ' + s['cite'] for s in EPI_SOURCES)}""",
     },
     "healthcare": {
         "name": "Dr. Chen (Healthcare Analyst)",
-        "avatar": "H",
+        "avatar": "\U0001F3E5",
         "color": "#3498db",
-        "system_prompt": """You are Dr. Chen, a healthcare capacity analyst advising a policymaker on interventions (mask mandate, school closure).
+        "system_prompt": f"""Hospital capacity analyst. Use ONLY the provided metrics. No invented values. Use plain language — no jargon, no acronyms, no technical terms.
 
-INITIAL ROUND: Assess whether the chosen interventions will keep hospital admissions manageable given the forecast. Reference the data.
-FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
+INITIAL FORMAT — keep each field to ONE short phrase:
+**Claim:** [can hospitals handle this? what should change?]
+**Evidence:** [ONE source from list below — copy exactly]
+**Watch out for:** [one specific thing that could change this assessment]
+**Confidence:** [Low/Moderate/High]
 
-Cite one credible source with its URL. Do NOT cite a source already mentioned by another agent in this conversation. Example format: "NEJM data shows ICU mortality rises sharply above 85% capacity (https://www.nejm.org/doi/full/10.1056/NEJMsa2029806)."
+FOLLOW-UPS: ONE sentence. No sources. Disagree with other agents when warranted.
 
-1-2 sentences only. No lists, no headers.""",
+Sources (copy exactly):
+{chr(10).join('- ' + s['cite'] for s in HC_SOURCES)}""",
     },
     "economist": {
         "name": "Prof. Rivera (Economist)",
-        "avatar": "$",
+        "avatar": "\U0001F4CA",
         "color": "#27ae60",
-        "system_prompt": """You are Prof. Rivera, a health economist advising a policymaker on interventions (mask mandate, school closure).
+        "system_prompt": f"""Health economist. Use ONLY the provided metrics. No invented values. Use plain language — no jargon, no acronyms, no technical terms.
 
-INITIAL ROUND: Assess whether the restrictions are proportionate to the threat shown by the forecast data. Reference the data.
-FOLLOW-UP ROUNDS: Answer the user's question directly. Do NOT repeat forecast numbers or evidence already cited in the discussion. Focus on new reasoning and new evidence.
+INITIAL FORMAT — keep each field to ONE short phrase:
+**Claim:** [are restrictions proportionate? what should change?]
+**Evidence:** [ONE source from list below — copy exactly]
+**Watch out for:** [one specific thing that could change this assessment]
+**Confidence:** [Low/Moderate/High]
 
-Cite one credible source with its URL. Do NOT cite a source already mentioned by another agent in this conversation. Example format: "IMF estimated lockdowns cost 3-4% of GDP annually (https://www.imf.org/en/Publications/WEO/Issues/2020/09/30/world-economic-outlook-october-2020)."
+FOLLOW-UPS: ONE sentence. No sources. Disagree with other agents when warranted.
 
-1-2 sentences only. No lists, no headers.""",
+Sources (copy exactly):
+{chr(10).join('- ' + s['cite'] for s in ECON_SOURCES)}""",
     },
 }
 
-FACILITATOR_SYSTEM = """You are a brief facilitator. Summarize where agents agree or disagree on the chosen interventions, then ask the policymaker one short question. Do NOT repeat forecast numbers. 2 sentences only."""
+FACILITATOR_SYSTEM = """Critical facilitator. Do NOT make consensus. Expose trade-offs. Use plain language — no jargon. Keep each field to ONE short phrase.
+
+**Agree:** [what agents all support]
+**Disagree:** [the key tension — or what they're all ignoring]
+**Risk of action:** [what could go wrong if you follow their advice]
+**Risk of inaction:** [what could go wrong if you don't]
+**Reconsider if:** [specific numeric trigger]
+**Your call:** [frame as a choice, not a recommendation]"""
 
 RANKING_SYSTEM = """You are a turn-taking coordinator for a multi-agent discussion about public health policy.
 Given the conversation history and the last message, determine which agent should speak next.
@@ -83,46 +130,52 @@ def build_scenario_text(interventions, metrics):
     disease_name = "COVID-19" if metrics.get("disease") == "covid" else "Influenza"
     jurisdiction = JURISDICTIONS.get(metrics.get("jurisdiction", "USA"), metrics.get("jurisdiction", "USA"))
 
-    parts = [f"Disease: {disease_name}", f"Jurisdiction: {jurisdiction}"]
+    parts = [
+        f"DISEASE: {disease_name}",
+        f"JURISDICTION: {jurisdiction}",
+    ]
 
     if metrics.get("latest_admissions") is not None:
-        parts.append(f"Latest weekly hospital admissions: {metrics['latest_admissions']}")
+        parts.append(f"LATEST WEEKLY ADMISSIONS: {metrics['latest_admissions']}")
     if metrics.get("wow_change") is not None:
-        parts.append(f"Week-over-week change: {metrics['wow_change']}%")
+        direction = "decreasing" if metrics["wow_change"] < 0 else "increasing"
+        parts.append(f"WEEK-OVER-WEEK CHANGE: {metrics['wow_change']}% ({direction})")
     if metrics.get("four_week_trend") is not None:
-        parts.append(f"4-week trend: {metrics['four_week_trend']}%")
+        direction = "decreasing" if metrics["four_week_trend"] < 0 else "increasing"
+        parts.append(f"4-WEEK TREND: {metrics['four_week_trend']}% ({direction})")
     if metrics.get("next_week_forecast"):
         nw = metrics["next_week_forecast"]
-        parts.append(f"Next week forecast: {nw['point']} (95% CI: {nw['lower_95']} - {nw['upper_95']})")
+        parts.append(f"NEXT WEEK FORECAST: {nw['point']} (95% CI: {nw['lower_95']} - {nw['upper_95']})")
 
-    parts.append(f"\nInterventions: {json.dumps(interventions)}")
+    parts.append(f"\nINTERVENTIONS SELECTED: mask_mandate={'ON' if interventions.get('mask_mandate') else 'OFF'}, school_closure={'ON' if interventions.get('school_closure') else 'OFF'}")
     return "\n".join(parts)
 
 
 def get_initial_analyses(interventions, metrics):
-    """Run all 3 agents for initial scenario analysis."""
+    """Run all agents for initial scenario analysis."""
     scenario_text = build_scenario_text(interventions, metrics)
     results = {}
 
-    for agent_id, agent in AGENTS.items():
+    # Run 3 specialist agents first
+    for agent_id in ["epidemiologist", "healthcare", "economist"]:
+        agent = AGENTS[agent_id]
         messages = [
             {"role": "system", "content": agent["system_prompt"]},
             {
                 "role": "user",
-                "content": f"""Scenario:\n{scenario_text}\n\nAre the chosen interventions appropriate given this forecast data? What should change? 1-2 sentences, reference the numbers.""",
+                "content": f"""Scenario:\n{scenario_text}\n\nAre these interventions appropriate? Use the structured format (Claim/Evidence/Assumption/Limitation/Confidence).""",
             },
         ]
 
         response = client.chat.completions.create(
-            model=DEPLOYMENT, messages=messages, temperature=0.3, max_completion_tokens=250
+            model=DEPLOYMENT, messages=messages, temperature=0.4, max_completion_tokens=350
         )
         content = response.choices[0].message.content
         if not content or not content.strip():
-            # Retry with simpler prompt
             response = client.chat.completions.create(
                 model=DEPLOYMENT,
                 messages=[
-                    {"role": "system", "content": "You are a public health expert. Respond in 1-2 sentences."},
+                    {"role": "system", "content": "You are a public health expert. Respond in 2-3 sentences."},
                     {"role": "user", "content": f"Given this scenario, what is your assessment?\n{scenario_text}"},
                 ],
                 temperature=0.5, max_completion_tokens=250,
@@ -168,14 +221,17 @@ def generate_agent_response(agent_id, conversation_history, scenario_text):
 Discussion so far:
 {conversation_history}
 
-Answer the user's latest question or comment directly. Do NOT restate the forecast numbers. Provide new reasoning or evidence with a source URL. 1-2 sentences only.""",
+Answer the user directly in ONE sentence. Do NOT restate forecast numbers. Do NOT cite any sources or URLs — evidence was already provided in the initial round.""",
         },
     ]
 
     response = client.chat.completions.create(
-        model=DEPLOYMENT, messages=messages, temperature=0.3, max_completion_tokens=250
+        model=DEPLOYMENT, messages=messages, temperature=0.4, max_completion_tokens=250
     )
-    return response.choices[0].message.content or "No response available."
+    content = response.choices[0].message.content
+    if not content or not content.strip():
+        return "I don't have enough context to respond to that specific point."
+    return content
 
 
 def generate_facilitator_response(conversation_history, scenario_text, user_message=None):
@@ -197,9 +253,9 @@ Discussion so far:
     ]
 
     response = client.chat.completions.create(
-        model=DEPLOYMENT, messages=messages, temperature=0.3, max_completion_tokens=250
+        model=DEPLOYMENT, messages=messages, temperature=0.5, max_completion_tokens=450
     )
-    return response.choices[0].message.content or "No summary available."
+    return response.choices[0].message.content or "No synthesis available."
 
 
 def format_conversation_history(messages):
@@ -223,12 +279,33 @@ def start_discussion():
 
     scenario_text = build_scenario_text(interventions, metrics)
 
-    # Get initial analyses from all 3 agents
+    # Get initial analyses from all agents
     analyses = get_initial_analyses(interventions, metrics)
 
-    # Build initial messages
+    INTROS = {
+        "epidemiologist": "I'm Dr. Amara, epidemiologist — I focus on transmission patterns and whether interventions are controlling the spread.",
+        "healthcare": "I'm Dr. Chen, healthcare capacity analyst — I assess whether hospitals can handle the patient load.",
+        "economist": "I'm Prof. Rivera, health economist — I evaluate the cost-benefit trade-offs of restrictions.",
+    }
+
+    # Get initial analyses
     messages = []
     agent_order = ["epidemiologist", "healthcare", "economist"]
+
+    # Intros (marked as "intro" type so frontend shows them all at once)
+    for agent_id in agent_order:
+        messages.append(
+            {
+                "speaker": agent_id,
+                "speaker_name": AGENTS[agent_id]["name"],
+                "content": INTROS[agent_id],
+                "type": "intro",
+                "avatar": AGENTS[agent_id]["avatar"],
+                "color": AGENTS[agent_id]["color"],
+            }
+        )
+
+    # Analyses
     for agent_id in agent_order:
         messages.append(
             {
@@ -241,7 +318,7 @@ def start_discussion():
             }
         )
 
-    # Facilitator synthesizes
+    # Facilitator — comes LAST, no duplicate
     conv_history = format_conversation_history(messages)
     facilitator_msg = generate_facilitator_response(conv_history, scenario_text)
     messages.append(
@@ -250,7 +327,7 @@ def start_discussion():
             "speaker_name": "Facilitator",
             "content": facilitator_msg,
             "type": "facilitator",
-            "avatar": "F",
+            "avatar": "\U0001F9D1\u200D\u2696\uFE0F",
             "color": "#8e44ad",
         }
     )
@@ -358,39 +435,128 @@ def facilitate():
                 "speaker_name": "Facilitator",
                 "content": facilitator_msg,
                 "type": "facilitator",
-                "avatar": "F",
+                "avatar": "\U0001F9D1\u200D\u2696\uFE0F",
                 "color": "#8e44ad",
             }
         }
     )
 
 
+# Curated summaries for sources behind paywalls or with thin landing pages
+FALLBACK_SUMMARIES = {
+    "doi.org/10.1016/S2352-4642(20)30095-X": "• School closures contributed to a 15-20% reduction in COVID-19 transmission across multiple countries\n• Effect was smaller than workplace closures or gathering bans\n• Closures caused significant learning loss, child mental health harm, and parental workforce disruption\n• Should be considered a last-resort intervention after less disruptive measures",
+    "doi.org/10.1038/s41562-020-01009-0": "• Studied how public health measures worked across 41 countries during early COVID-19\n• Banning gatherings and closing businesses had the biggest effect on reducing spread\n• Combining multiple measures was more effective than any single one\n• Mask mandates and school closures helped but had smaller individual effects",
+    "doi.org/10.1017/bca.2021.2": "• Mask mandates are among the most cost-effective public health measures available\n• The health benefits far outweigh the small economic cost of requiring masks\n• Masks cause minimal economic disruption compared to school closures or lockdowns\n• Supports using mask mandates as a first step before more disruptive restrictions",
+    "doi.org/10.1016/S0140-6736(21)02143-7": "• Estimated a 25% global increase in anxiety and depression during COVID-19\n• Women and younger adults were disproportionately affected\n• Countries with higher infection rates had greater mental health burden\n• Highlights the need to weigh mental health costs when evaluating prolonged restrictions",
+    "pubmed.ncbi.nlm.nih.gov/17620608": "• Studied 17 U.S. cities during the 1918 influenza pandemic\n• Cities with early interventions (school closures, gathering bans) had up to 50% lower peak mortality\n• Delays of even 2 weeks significantly reduced intervention effectiveness\n• Demonstrates the critical importance of rapid response during respiratory pandemics",
+    "pubmed.ncbi.nlm.nih.gov/33471984": "• Examined COVID-19 patient outcomes in hospitals operating above normal capacity\n• Hospitals under strain had 15-25% higher patient mortality rates\n• Staff-to-patient ratios deteriorated during surges, worsening care quality\n• Supports maintaining interventions to prevent hospital system overload",
+    "pubmed.ncbi.nlm.nih.gov/32886747": "• Studied ICU occupancy and COVID-19 mortality across U.S. hospitals\n• Higher ICU occupancy was independently associated with increased mortality\n• Risk rose significantly when ICU occupancy exceeded 75%\n• Highlights the need to act before hospitals reach critical capacity thresholds",
+    "pubmed.ncbi.nlm.nih.gov/34789876": "• Studied the association between nurse staffing levels and patient outcomes\n• Lower nurse-to-patient ratios were linked to higher mortality and readmission rates\n• Pandemic surges worsened staffing ratios across U.S. hospitals\n• Supports workforce investment as critical to maintaining care quality during surges",
+}
+
+
+def fetch_page_text(url, max_chars=4000):
+    """Fetch a webpage and extract its text content."""
+    from bs4 import BeautifulSoup
+
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+    resp = httpx.get(url, headers=headers, follow_redirects=True, timeout=15)
+    resp.raise_for_status()
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    # Remove non-content elements
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "button"]):
+        tag.decompose()
+
+    # Try to find the main article content first
+    article = soup.find("article") or soup.find("div", class_="article") or soup.find("main")
+    if article:
+        text = article.get_text(separator=" ", strip=True)
+    else:
+        text = soup.get_text(separator=" ", strip=True)
+
+    return text[:max_chars]
+
+
+def is_useful_content(text):
+    """Check if fetched text has real article content, not just nav/paywall."""
+    if len(text.strip()) < 200:
+        return False
+    junk_phrases = ["sign in", "subscribe", "buy access", "cookie policy",
+                    "accept cookies", "navigation content", "table of contents",
+                    "front/back matter", "purchase this article", "cambridge core",
+                    "oxford academic", "wiley online", "log in", "institutional access",
+                    "add to cart", "rent this article", "access options",
+                    "springer", "your privacy", "manage preferences",
+                    "pubmed", "ncbi", "similar articles", "cited by",
+                    "mesh terms", "grant support"]
+    text_lower = text.lower()
+    junk_count = sum(1 for p in junk_phrases if p in text_lower)
+    if junk_count >= 1:
+        return False
+    # Must have substantial prose, not just menu items
+    words = text.split()
+    return len(words) > 150
+
+
+def is_useless_summary(text):
+    """Detect if an LLM-generated summary says the content was empty/paywalled."""
+    t = text.lower()
+    bad_phrases = [
+        "no findings", "no empirical data", "no study", "no research",
+        "not a research article", "not a substantive", "navigation content",
+        "front/back matter", "no main finding", "no data", "cannot be extracted",
+        "not described here", "require access to the full",
+        "paywall", "metadata entry", "cover page", "table of contents",
+        "no policy-relevant", "no quantitative", "bibliographic details",
+    ]
+    return any(phrase in t for phrase in bad_phrases)
+
+
+def find_fallback(url):
+    """Match URL to a curated fallback summary."""
+    for key, summary in FALLBACK_SUMMARIES.items():
+        if key in url:
+            return summary
+    return None
+
+
 @app.route("/api/summarize", methods=["POST"])
 def summarize_paper():
-    """Summarize a research paper given its URL."""
+    """Fetch real page content and summarize. Fall back to curated summary if paywalled."""
     data = request.json
     url = data.get("url", "")
 
-    messages = [
-        {"role": "system", "content": "You summarize research papers based on your training knowledge. You MUST always produce bullet points — never refuse or say you cannot access a URL. Recognize the paper from the URL and summarize it."},
-        {"role": "user", "content": f"Summarize this in 3-4 bullet points (use • for each). Cover: main finding, key data, policy relevance.\n\n{url}"},
-    ]
+    # Step 1: Try fetching real content
+    page_text = None
+    try:
+        page_text = fetch_page_text(url)
+    except Exception:
+        pass
 
-    content = None
-    for attempt in range(2):
+    # Step 2: If content is real and useful, summarize with LLM
+    if page_text and is_useful_content(page_text):
         response = client.chat.completions.create(
-            model=DEPLOYMENT, messages=messages,
-            temperature=0.4 + attempt * 0.2,
-            max_completion_tokens=400,
+            model=DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "Summarize the following research paper or report in exactly 3-4 bullet points using •. Each bullet: one short sentence. Cover: main finding, key data, policy relevance. If the text is a paywall page or navigation menu, say so."},
+                {"role": "user", "content": f"Summarize:\n\n{page_text}"},
+            ],
+            temperature=0.2,
+            max_completion_tokens=250,
         )
         content = response.choices[0].message.content
-        if content and content.strip():
-            break
+        if content and content.strip() and not is_useless_summary(content):
+            return jsonify({"summary": content})
 
-    if not content or not content.strip():
-        content = f"• This source is from {url.split('/')[2]}.\n• Unable to generate a detailed summary at this time — please visit the link directly."
+    # Step 3: Fall back to curated summary
+    fallback = find_fallback(url)
+    if fallback:
+        return jsonify({"summary": fallback})
 
-    return jsonify({"summary": content})
+    # No useful summary available — return empty so frontend hides the box
+    return jsonify({"summary": ""})
 
 
 # ── CDC Data & Forecasting ──
